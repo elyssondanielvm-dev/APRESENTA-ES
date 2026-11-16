@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Avaliador de Apresentações - 6º Ano (Matemática)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <!-- Tone.js for gentle timer chime -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    @keyframes pulse-urgent {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+      50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    }
+    .timer-urgent { animation: pulse-urgent 1.5s infinite; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printable-report, #printable-report * { visibility: visible; }
+      #printable-report {
+        position: absolute; left: 0; top: 0; width: 100%;
+        background: white !important; color: black !important;
+      }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shadow-lg sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        
+        <!-- Brand -->
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shrink-0">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon>
+              <line x1="12" y1="22" x2="12" y2="15.5"></line>
+              <polyline points="22 8.5 12 15.5 2 8.5"></polyline>
+              <polyline points="2 15.5 12 8.5 22 15.5"></polyline>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg sm:text-xl font-bold text-white">Avaliador de Apresentações — 6º Ano</h1>
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Prof. Daniel
+              </span>
+            </div>
+            <p class="text-xs text-slate-300">Turmas separadas (601 e 602) • Seleção de alunos ao vivo</p>
+          </div>
+        </div>
+
+        <!-- Class Switcher & Actions -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Class Toggle -->
+          <div class="bg-slate-800/90 p-1 rounded-xl border border-slate-700 flex items-center">
+            <button id="btn-class-601" onclick="switchClass('601')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all">
+              ☀️ Turma 601 <span class="text-[11px] opacity-80">(Matutino)</span>
+            </button>
+            <button id="btn-class-602" onclick="switchClass('602')" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all">
+              🌤️ Turma 602 <span class="text-[11px] opacity-80">(Vespertino)</span>
+            </button>
+          </div>
+
+          <!-- Add Group Button -->
+          <button onclick="addNewGroup()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-medium transition flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Novo Grupo</span>
+          </button>
+
+          <!-- Boletim Button -->
+          <button onclick="openSummaryModal()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Boletim Geral</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 no-print">
+
+    <!-- Group Selector Tabs -->
+    <section>
+      <div class="flex items-center justify-between mb-2.5">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500" id="current-class-info-label">
+          Turma 601 • Turno Matutino
+        </span>
+        <span class="text-xs text-slate-500 hidden sm:inline">
+          Selecione o grupo que está apresentando:
+        </span>
+      </div>
+      <div id="group-tabs" class="flex flex-wrap gap-2">
+        <!-- Populated via JS -->
+      </div>
+    </section>
+
+    <!-- Active Group Header & Timer -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-gradient-to-br from-white via-slate-50/70 to-blue-50/40">
+        
+        <div class="space-y-3 max-w-2xl flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="active-group-badge" class="px-3 py-1 rounded-lg bg-blue-900 text-white text-xs font-bold uppercase tracking-wide">
+              Grupo 1
+            </span>
+            <span id="active-group-member-count" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">
+              0 alunos selecionados
+            </span>
+            <button onclick="removeCurrentGroup()" class="text-xs text-red-600 hover:text-red-700 underline font-medium ml-2">
+              Excluir este grupo
+            </button>
+          </div>
+
+          <!-- Editable Group Title / Topic -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Título ou Tema do Grupo</label>
+            <input type="text" id="active-group-title-input" oninput="updateActiveGroupTitle(this.value)" placeholder="Ex.: O que são poliedros e seus elementos" class="w-full text-lg sm:text-xl font-extrabold text-slate-900 bg-transparent border-b border-slate-300 focus:border-blue-600 focus:outline-none pb-1 transition" />
+          </div>
+        </div>
+
+        <!-- 20-Minute Countdown Timer -->
+        <div id="timer-card" class="rounded-2xl border-2 p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-center gap-4 shrink-0 bg-emerald-50/70 border-emerald-200">
+          <div class="text-center sm:text-left">
+            <div class="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold uppercase tracking-wider mb-0.5 text-emerald-800" id="timer-label">
+              <span>⏱️ Tempo de Apresentação</span>
+            </div>
+            <div class="flex items-baseline justify-center sm:justify-start gap-2">
+              <span id="timer-display" class="font-mono text-4xl sm:text-5xl font-bold tracking-tight text-emerald-700">
+                20:00
+              </span>
+              <button onclick="openAdjustTimerModal()" class="text-xs underline text-slate-500 hover:text-slate-800 font-medium">
+                ajustar
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-timer-toggle" onclick="toggleTimer()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition flex items-center gap-1.5 min-w-[110px] justify-center">
+              <span id="text-timer-toggle">Iniciar</span>
+            </button>
+            <button onclick="resetTimer()" class="p-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition" title="Reiniciar 20 min">
+              🔄
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- LIVE STUDENT SELECTION PANEL (The core requested feature) -->
+    <section class="bg-white rounded-2xl border border-blue-200 shadow-sm p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm">👥</span>
+            <span>Quem está apresentando neste grupo? (Selecione na hora)</span>
+          </h3>
+          <p class="text-xs text-slate-500">
+            Marque os alunos da turma que fazem parte deste grupo. Eles aparecerão automaticamente abaixo para receber notas.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="selectAllStudentsInClass()" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+            Marcar Todos
+          </button>
+          <button onclick="clearAllStudentsInGroup()" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+            Desmarcar Todos
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid of Students for Live Check -->
+      <div id="live-student-checkboxes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
+        <!-- Populated via JS -->
+      </div>
+    </section>
+
+    <!-- Q&A Pedagogical Support -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-sm">💡</span>
+          <span>Perguntas de Arguição & Gabarito Esperado</span>
+        </h3>
+        <button onclick="toggleAnswers()" id="btn-toggle-ans" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+          Ocultar/Mostrar Respostas
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 mb-4">
+        Sugestões de perguntas para fazer à turma após a apresentação:
+      </p>
+      <div id="qa-container" class="space-y-3">
+        <!-- Populated via JS -->
+      </div>
+    </section>
+
+    <!-- Evaluation Section: Group Criteria (4.0) + Individual Students (6.0) -->
+    <section class="space-y-6">
+      
+      <!-- Collective Group Criteria (4.0) -->
+      <div class="bg-white rounded-2xl border border-blue-200 shadow-sm overflow-hidden">
+        <div class="bg-blue-950 text-white px-5 py-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md bg-blue-500/30 text-xs font-bold uppercase">Nota Coletiva</span>
+            <h3 class="font-bold text-base">Critérios Gerais da Equipe (Até 4,0 pontos)</h3>
+          </div>
+          <div class="text-sm font-semibold text-blue-200">
+            Nota do Grupo: <span id="group-collective-score" class="text-white font-mono text-lg font-bold ml-1">0,0</span> / 4,0
+          </div>
+        </div>
+
+        <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-5 bg-blue-50/30">
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-3">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold uppercase tracking-wider text-blue-700">Critério 1 (0 a 2,0 pts)</span>
+                <span id="c1-val-badge" class="font-mono text-sm font-bold bg-slate-100 px-2 py-0.5 rounded">0,0</span>
+              </div>
+              <h4 class="font-bold text-slate-900 text-sm">Organização e Clareza do Conteúdo</h4>
+              <p class="text-xs text-slate-500 mt-1">Exemplos corretos, cartaz ou modelos bem estruturados.</p>
+            </div>
+            <div id="c1-buttons" class="grid grid-cols-5 gap-1.5"></div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-3">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold uppercase tracking-wider text-blue-700">Critério 2 (0 a 2,0 pts)</span>
+                <span id="c2-val-badge" class="font-mono text-sm font-bold bg-slate-100 px-2 py-0.5 rounded">0,0</span>
+              </div>
+              <h4 class="font-bold text-slate-900 text-sm">Trabalho em Equipe e Gestão do Tempo</h4>
+              <p class="text-xs text-slate-500 mt-1">Divisão equilibrada das falas e respeito ao tempo (20 min).</p>
+            </div>
+            <div id="c2-buttons" class="grid grid-cols-5 gap-1.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Individual Student Cards -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs font-bold uppercase">Nota Individual</span>
+            <span>Avaliação dos Alunos Selecionados neste Grupo</span>
+          </h3>
+          <button onclick="fillAllSelectedIndividualMax()" class="text-xs font-semibold px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-sm transition">
+            ⚡ Nota máxima (2,0) para todos deste grupo
+          </button>
+        </div>
+
+        <div id="selected-students-evaluation-container" class="grid grid-cols-1 gap-4">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-4 mt-10 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <div><strong>Avaliador de Apresentações</strong> • Turmas 601 e 602 separadas com sucesso</div>
+      <button onclick="confirmResetCurrentClass()" class="text-red-600 hover:text-red-700 font-medium underline">
+        Zerar dados desta turma
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL: SUMMARY / BOLETIM -->
+  <div id="summary-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between no-print">
+        <div>
+          <h2 class="text-lg font-bold">📊 Boletim Consolidado de Notas — <span id="modal-class-name">Turma 601</span></h2>
+          <p class="text-xs text-slate-300">Pronto para copiar para o Excel ou Planilhas do Google</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyToClipboard()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition">
+            📋 Copiar para Excel / Sheets
+          </button>
+          <button onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition">
+            🖨️ Imprimir / PDF
+          </button>
+          <button onclick="closeSummaryModal()" class="p-2 rounded-xl bg-slate-800 text-slate-300">✕</button>
+        </div>
+      </div>
+      <div id="printable-report" class="p-6 overflow-y-auto flex-1 space-y-4">
+        <div class="border-b-2 border-slate-800 pb-3 flex justify-between items-end">
+          <div>
+            <h3 id="report-main-title" class="text-xl font-extrabold text-slate-900">Relatório de Notas — Turma 601</h3>
+            <p class="text-xs text-slate-600">Professor Daniel • Matemática • Geometria Espacial</p>
+          </div>
+          <div class="text-xs text-right text-slate-600">
+            <p id="report-date">Data: --/--/----</p>
+            <p id="report-avg" class="font-bold text-slate-900">Média: 0,0</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto border border-slate-300 rounded-xl">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-300 font-bold text-slate-800">
+                <th class="py-2.5 px-3">Grupo / Tema</th>
+                <th class="py-2.5 px-3">Nome do Aluno(a)</th>
+                <th class="py-2.5 px-2 text-center">C1 (Grupo)</th>
+                <th class="py-2.5 px-2 text-center">C2 (Grupo)</th>
+                <th class="py-2.5 px-2 text-center bg-blue-50">Sub. Grupo</th>
+                <th class="py-2.5 px-2 text-center">C3 (Indiv.)</th>
+                <th class="py-2.5 px-2 text-center">C4 (Indiv.)</th>
+                <th class="py-2.5 px-2 text-center">C5 (Indiv.)</th>
+                <th class="py-2.5 px-2 text-center bg-emerald-50">Sub. Indiv.</th>
+                <th class="py-2.5 px-3 text-center bg-slate-200 font-extrabold">NOTA FINAL</th>
+              </tr>
+            </thead>
+            <tbody id="summary-tbody" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADJUST TIMER -->
+  <div id="adjust-timer-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">⏱️ Ajustar Cronômetro</h3>
+      <input type="number" id="custom-mins" min="1" max="60" value="20" class="w-full rounded-xl border px-3.5 py-2.5 text-lg font-mono font-bold" />
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAdjustTimerModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-sm font-semibold">Cancelar</button>
+        <button onclick="applyTimerMinutes()" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RESET -->
+  <div id="confirm-reset-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Zerar dados desta turma?</h3>
+      <p class="text-sm text-slate-600">Isso apagará todas as notas e alocações da turma atual. Deseja continuar?</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeResetModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-sm font-semibold">Cancelar</button>
+        <button onclick="executeReset()" class="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-semibold">Sim, zerar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // LISTAS OFICIAIS DOS ALUNOS SEPARADAS POR TURMA
+    const TURMA_601_STUDENTS = [
+      "AMANDA BEATRIZ SILVEIRA", "BIANCA DE MEDEIROS", "DANILO LANGER LOHSE",
+      "DAVI JOAQUIM BRAYER", "GABRIEL HENRIQUE GESSER", "IAGO DANYEL MAIA",
+      "ISABELA ABREU DE OLIVEIRA", "JOÃO LUCAS SOUZA DE LIMA", "JOÃO PAULO BRAYER",
+      "JOÃO PEDRO BUTTENDORF", "LAURA DOS SANTOS", "LUCAS FELIPE MOREIRA NUNES",
+      "LUIZ FELIPE LOPES STAZESKI", "MAIARA PIACENTINI BUBLITZ", "MELISSA JUNG",
+      "MELISSA MARIA DIAS", "MILENA FLOR DA SILVA", "NATHAN ROCHA DA LUZ",
+      "RAÍSSA YASMIN RITTER BOLDUAN", "SOPHIA ISABELLY DA SILVA", "THAIS TALITA ENGELHARDT",
+      "WILLYAM GUSTAVO DALLMANN"
+    ];
+
+    const TURMA_602_STUDENTS = [
+      "ADRYAN MAX BAYER RAMALHO", "ANA JULIA ANTONIAWICZ DA SILVA", "ANA VITÓRIA BREMER",
+      "ARTHUR FARIAS MOTA", "CAMILLY VITÓRIA SELL", "DANIELI BOSSE",
+      "EMILY ISADORA CARLINI", "GUSTAVO SCOTTINI ZIMMERMANN", "ILIAS KRISANSKI BUTTENDORF",
+      "JACKSON KUSINSKI BORGES", "KEILA TAINARA DANIEL", "LUIZ FERNANDO MORAES",
+      "MARCOS VINICIUS MACHADO GONÇALVES", "MARIA HELENA BROSOWSKI SCHEPLE",
+      "MARIA LUIZA PAIXÃO SANTOS", "MARIA VITÓRIA PERES SELZLER", "NICOLLI KIATKOWSKI",
+      "PEDRO HENRIQUE FREIRE RODRIGUES", "RAFAEL DOS SANTOS FROTSCHER",
+      "RAFAEL PETERSON HUBNER", "SOFIA DOS SANTOS", "VANESSA NUNES PEREIRA"
+    ];
+
+    const DEFAULT_TEMPLATES = [
+      {
+        title: "Grupo 1 — O que são poliedros e seus elementos",
+        qa: [
+          { q: "Qual a diferença entre polígono (figura plana) e poliedro (sólido)?", a: "Polígono é plano (2 dimensões); poliedro é um sólido espacial (3 dimensões)." },
+          { q: "O que são faces, arestas e vértices?", a: "Faces são as superfícies planas, arestas são as linhas de encontro e vértices são as quinas/pontas." }
+        ]
+      },
+      {
+        title: "Grupo 2 — Poliedros Regulares (Sólidos de Platão)",
+        qa: [
+          { q: "O que é um poliedro regular?", a: "Todas as faces são polígonos regulares idênticos e o mesmo número de arestas se encontra em cada vértice." },
+          { q: "Quais são os 5 Sólidos de Platão?", a: "Tetraedro, Cubo, Octaedro, Dodecaedro e Icosaedro." }
+        ]
+      },
+      {
+        title: "Grupo 3 — Poliedros Irregulares × Não Poliedros",
+        qa: [
+          { q: "O que diferencia um poliedro irregular de um não poliedro?", a: "O poliedro irregular tem faces planas de tamanhos/formas diferentes; o não poliedro possui superfícies curvas (esfera, cilindro, cone)." }
+        ]
+      },
+      {
+        title: "Grupo 4 — Construção Prática e Exposição dos Modelos",
+        qa: [
+          { q: "Na montagem com palitos e massinha, o que cada elemento representa?", a: "Massinha = Vértices; Palitos = Arestas." }
+        ]
+      },
+      {
+        title: "Grupo 5 — Curiosidades, Fórmula de Euler e Dia a Dia",
+        qa: [
+          { q: "Qual é a Fórmula de Euler e como ela funciona no cubo?", a: "Vértices + Faces = Arestas + 2 (8 + 6 = 12 + 2 → 14 = 14)." }
+        ]
+      }
+    ];
+
+    const SCORE_OPTS = [0, 0.5, 1.0, 1.5, 2.0];
+    const STORAGE_KEY = "avaliador_6ano_daniel_v2";
+
+    let appState = {
+      activeClass: "601",
+      activeGroupId: null,
+      showAnswers: true,
+      classes: {
+        "601": createClassInitialData(TURMA_601_STUDENTS),
+        "602": createClassInitialData(TURMA_602_STUDENTS)
+      }
+    };
+
+    let timerInterval = null;
+
+    function createClassInitialData(studentNames) {
+      const groups = DEFAULT_TEMPLATES.map((tpl, idx) => ({
+        id: `g_${idx + 1}_${Math.random().toString(36).substr(2, 5)}`,
+        title: tpl.title,
+        c1: 0,
+        c2: 0,
+        memberNames: [], // Preenchido ao vivo pelo professor
+        timerSeconds: 1200,
+        timerRunning: false
+      }));
+
+      // Notas individuais armazenadas por nome do aluno
+      const studentScores = {};
+      studentNames.forEach(name => {
+        studentScores[name] = { c3: 0, c4: 0, c5: 0, note: "" };
+      });
+
+      return {
+        groups: groups,
+        studentScores: studentScores
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          appState.activeClass = parsed.activeClass || "601";
+          appState.classes = parsed.classes || appState.classes;
+          // Garantir que todos os alunos estejam nos dicionários
+          [TURMA_601_STUDENTS, TURMA_602_STUDENTS].forEach((list, idx) => {
+            const cid = idx === 0 ? "601" : "602";
+            if (!appState.classes[cid]) appState.classes[cid] = createClassInitialData(list);
+            list.forEach(name => {
+              if (!appState.classes[cid].studentScores[name]) {
+                appState.classes[cid].studentScores[name] = { c3: 0, c4: 0, c5: 0, note: "" };
+              }
+            });
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      const clsData = appState.classes[appState.activeClass];
+      if (!appState.activeGroupId && clsData.groups.length > 0) {
+        appState.activeGroupId = clsData.groups[0].id;
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function showToast(msg) {
+      const c = document.getElementById("toast-container");
+      const t = document.createElement("div");
+      t.className = "bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium transition";
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 2500);
+    }
+
+    function formatDecimal(num) {
+      return Number(num || 0).toFixed(1).replace(".", ",");
+    }
+
+    function formatTime(secs) {
+      const m = Math.floor(Math.max(0, secs) / 60);
+      const s = Math.max(0, secs) % 60;
+      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+
+    function getCurrentClassData() {
+      return appState.classes[appState.activeClass];
+    }
+
+    function getCurrentGroup() {
+      const cls = getCurrentClassData();
+      return cls.groups.find(g => g.id === appState.activeGroupId) || cls.groups[0];
+    }
+
+    // Timer Loop
+    function startTimerEngine() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        let updated = false;
+        ["601", "602"].forEach(cid => {
+          appState.classes[cid].groups.forEach(g => {
+            if (g.timerRunning && g.timerSeconds > 0) {
+              g.timerSeconds -= 1;
+              if (g.timerSeconds === 0) g.timerRunning = false;
+              if (cid === appState.activeClass && g.id === appState.activeGroupId) updated = true;
+            }
+          });
+        });
+        if (updated) {
+          updateTimerUI();
+          saveState();
+        }
+      }, 1000);
+    }
+
+    function toggleTimer() {
+      const g = getCurrentGroup();
+      g.timerRunning = !g.timerRunning;
+      saveState();
+      updateTimerUI();
+    }
+
+    function resetTimer() {
+      const g = getCurrentGroup();
+      g.timerRunning = false;
+      g.timerSeconds = 1200;
+      saveState();
+      updateTimerUI();
+    }
+
+    function updateTimerUI() {
+      const g = getCurrentGroup();
+      document.getElementById("timer-display").textContent = formatTime(g.timerSeconds);
+      const btn = document.getElementById("btn-timer-toggle");
+      btn.textContent = g.timerRunning ? "Pausar" : "Iniciar";
+      btn.className = g.timerRunning
+        ? "px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-sm transition"
+        : "px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition";
+    }
+
+    function openAdjustTimerModal() {
+      const g = getCurrentGroup();
+      document.getElementById("custom-mins").value = Math.round(g.timerSeconds / 60);
+      document.getElementById("adjust-timer-modal").classList.remove("hidden");
+    }
+    function closeAdjustTimerModal() { document.getElementById("adjust-timer-modal").classList.add("hidden"); }
+    function applyTimerMinutes() {
+      const val = parseInt(document.getElementById("custom-mins").value, 10);
+      if (!isNaN(val) && val > 0) {
+        const g = getCurrentGroup();
+        g.timerSeconds = val * 60;
+        g.timerRunning = false;
+        saveState();
+        updateTimerUI();
+        closeAdjustTimerModal();
+        showToast("Tempo ajustado!");
+      }
+    }
+
+    // TURMA SWITCH
+    function switchClass(classId) {
+      appState.activeClass = classId;
+      const cls = getCurrentClassData();
+      if (cls.groups.length > 0) appState.activeGroupId = cls.groups[0].id;
+      saveState();
+      renderAll();
+      showToast(`Alternado para Turma ${classId}`);
+    }
+
+    function selectGroup(groupId) {
+      appState.activeGroupId = groupId;
+      saveState();
+      renderAll();
+    }
+
+    function addNewGroup() {
+      const cls = getCurrentClassData();
+      const num = cls.groups.length + 1;
+      const newG = {
+        id: `g_${Date.now()}`,
+        title: `Grupo ${num} — Novo Tema`,
+        c1: 0,
+        c2: 0,
+        memberNames: [],
+        timerSeconds: 1200,
+        timerRunning: false
+      };
+      cls.groups.push(newG);
+      appState.activeGroupId = newG.id;
+      saveState();
+      renderAll();
+      showToast("Novo grupo criado!");
+    }
+
+    function removeCurrentGroup() {
+      const cls = getCurrentClassData();
+      if (cls.groups.length <= 1) {
+        showToast("A turma precisa ter pelo menos 1 grupo.");
+        return;
+      }
+      cls.groups = cls.groups.filter(g => g.id !== appState.activeGroupId);
+      appState.activeGroupId = cls.groups[0].id;
+      saveState();
+      renderAll();
+      showToast("Grupo removido.");
+    }
+
+    function updateActiveGroupTitle(val) {
+      const g = getCurrentGroup();
+      g.title = val;
+      saveState();
+      renderGroupTabs();
+    }
+
+    // LIVE STUDENT CHECKBOXES
+    function renderLiveStudentCheckboxes() {
+      const cls = getCurrentClassData();
+      const g = getCurrentGroup();
+      const allNames = appState.activeClass === "601" ? TURMA_601_STUDENTS : TURMA_602_STUDENTS;
+      const container = document.getElementById("live-student-checkboxes");
+
+      document.getElementById("active-group-member-count").textContent = `${g.memberNames.length} aluno(s) neste grupo`;
+
+      container.innerHTML = allNames.map(name => {
+        const isSelected = g.memberNames.includes(name);
+        return `
+          <label class="flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition select-none ${
+            isSelected ? "bg-blue-50 border-blue-300 text-blue-950 font-semibold" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+          }">
+            <input type="checkbox" ${isSelected ? "checked" : ""} onchange="toggleStudentInGroup('${name}')" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer" />
+            <span class="text-xs sm:text-sm truncate">${name}</span>
+          </label>
+        `;
+      }).join("");
+    }
+
+    function toggleStudentInGroup(name) {
+      const g = getCurrentGroup();
+      const idx = g.memberNames.indexOf(name);
+      if (idx > -1) {
+        g.memberNames.splice(idx, 1);
+      } else {
+        g.memberNames.push(name);
+      }
+      saveState();
+      renderLiveStudentCheckboxes();
+      renderIndividualEvaluationCards();
+    }
+
+    function selectAllStudentsInClass() {
+      const g = getCurrentGroup();
+      g.memberNames = [...(appState.activeClass === "601" ? TURMA_601_STUDENTS : TURMA_602_STUDENTS)];
+      saveState();
+      renderLiveStudentCheckboxes();
+      renderIndividualEvaluationCards();
+    }
+
+    function clearAllStudentsInGroup() {
+      const g = getCurrentGroup();
+      g.memberNames = [];
+      saveState();
+      renderLiveStudentCheckboxes();
+      renderIndividualEvaluationCards();
+    }
+
+    // GROUP CRITERIA
+    function renderGroupCriteria() {
+      const g = getCurrentGroup();
+      const groupSub = Number(g.c1 || 0) + Number(g.c2 || 0);
+
+      document.getElementById("group-collective-score").textContent = formatDecimal(groupSub);
+      document.getElementById("c1-val-badge").textContent = formatDecimal(g.c1);
+      document.getElementById("c2-val-badge").textContent = formatDecimal(g.c2);
+
+      document.getElementById("c1-buttons").innerHTML = SCORE_OPTS.map(v => `
+        <button onclick="setGroupCrit('c1', ${v})" class="py-2 rounded-lg font-mono text-xs font-bold border transition ${
+          Number(g.c1) === v ? "bg-blue-700 text-white border-blue-700 shadow-sm" : "bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200"
+        }">${formatDecimal(v)}</button>
+      `).join("");
+
+      document.getElementById("c2-buttons").innerHTML = SCORE_OPTS.map(v => `
+        <button onclick="setGroupCrit('c2', ${v})" class="py-2 rounded-lg font-mono text-xs font-bold border transition ${
+          Number(g.c2) === v ? "bg-blue-700 text-white border-blue-700 shadow-sm" : "bg-slate-50 hover:bg-blue-50 text-slate-700 border-slate-200"
+        }">${formatDecimal(v)}</button>
+      `).join("");
+    }
+
+    function setGroupCrit(key, val) {
+      const g = getCurrentGroup();
+      g[key] = val;
+      saveState();
+      renderGroupCriteria();
+      renderIndividualEvaluationCards();
+    }
+
+    // INDIVIDUAL STUDENTS EVALUATION
+    function renderIndividualEvaluationCards() {
+      const cls = getCurrentClassData();
+      const g = getCurrentGroup();
+      const container = document.getElementById("selected-students-evaluation-container");
+
+      if (g.memberNames.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500 text-sm">
+            Nenhum aluno selecionado para este grupo ainda. Marque os nomes acima na lista da turma!
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = g.memberNames.map((name, index) => {
+        const scores = cls.studentScores[name] || { c3: 0, c4: 0, c5: 0, note: "" };
+        const groupSub = Number(g.c1 || 0) + Number(g.c2 || 0);
+        const indivSub = Number(scores.c3 || 0) + Number(scores.c4 || 0) + Number(scores.c5 || 0);
+        const total = Math.min(10, groupSub + indivSub);
+
+        const renderPills = (critKey, label) => {
+          const val = Number(scores[critKey] || 0);
+          return `
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between gap-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">${label}</span>
+                <span class="font-mono text-xs font-bold text-emerald-700">${formatDecimal(val)}</span>
+              </div>
+              <div class="grid grid-cols-5 gap-1">
+                ${SCORE_OPTS.map(opt => `
+                  <button onclick="setStudentCrit('${name}', '${critKey}', ${opt})" class="py-1.5 rounded-lg font-mono text-xs font-bold border transition ${
+                    val === opt ? "bg-emerald-600 text-white border-emerald-600 shadow-sm" : "bg-white hover:bg-emerald-50 text-slate-700 border-slate-200"
+                  }">${formatDecimal(opt)}</button>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        };
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                  ${index + 1}
+                </div>
+                <div>
+                  <h4 class="font-extrabold text-slate-900 text-sm sm:text-base">${name}</h4>
+                  <p class="text-xs text-slate-500">Grupo: <strong>${formatDecimal(groupSub)}</strong> | Individual: <strong>${formatDecimal(indivSub)}</strong></p>
+                </div>
+              </div>
+              <div class="px-4 py-1.5 rounded-xl bg-slate-900 text-white flex items-baseline gap-1.5">
+                <span class="text-[10px] uppercase text-slate-400">Nota Final</span>
+                <span class="font-mono text-xl font-extrabold text-emerald-400">${formatDecimal(total)}</span>
+                <span class="text-xs text-slate-400">/10</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              ${renderPills("c3", "3. Domínio (2,0)")}
+              ${renderPills("c4", "4. Postura/Voz (2,0)")}
+              ${renderPills("c5", "5. Ouvinte (2,0)")}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function setStudentCrit(name, critKey, val) {
+      const cls = getCurrentClassData();
+      if (!cls.studentScores[name]) cls.studentScores[name] = { c3: 0, c4: 0, c5: 0, note: "" };
+      cls.studentScores[name][critKey] = val;
+      saveState();
+      renderIndividualEvaluationCards();
+    }
+
+    function fillAllSelectedIndividualMax() {
+      const cls = getCurrentClassData();
+      const g = getCurrentGroup();
+      g.memberNames.forEach(name => {
+        if (!cls.studentScores[name]) cls.studentScores[name] = { c3: 0, c4: 0, c5: 0, note: "" };
+        cls.studentScores[name].c3 = 2.0;
+        cls.studentScores[name].c4 = 2.0;
+        cls.studentScores[name].c5 = 2.0;
+      });
+      saveState();
+      renderIndividualEvaluationCards();
+      showToast("Notas máximas aplicadas aos alunos deste grupo.");
+    }
+
+    // QA RENDER
+    function renderQA() {
+      const g = getCurrentGroup();
+      const container = document.getElementById("qa-container");
+      // Tentar associar template padrão pelo índice ou título
+      let tpl = DEFAULT_TEMPLATES.find(t => g.title.toLowerCase().includes(t.title.split("—")[0].trim().toLowerCase()));
+      if (!tpl) tpl = DEFAULT_TEMPLATES[0];
+
+      container.innerHTML = tpl.qa.map((item, idx) => `
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2">
+          <p class="text-xs sm:text-sm font-bold text-slate-900">P${idx + 1}: "${item.q}"</p>
+          <div class="qa-ans ${appState.showAnswers ? "" : "hidden"} p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-950">
+            <strong>Resposta Esperada:</strong> ${item.a}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function toggleAnswers() {
+      appState.showAnswers = !appState.showAnswers;
+      renderQA();
+    }
+
+    function renderGroupTabs() {
+      const cls = getCurrentClassData();
+      const container = document.getElementById("group-tabs");
+
+      container.innerHTML = cls.groups.map(g => {
+        const isActive = g.id === appState.activeGroupId;
+        return `
+          <button onclick="selectGroup('${g.id}')" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border transition flex items-center gap-2 ${
+            isActive ? "bg-blue-950 text-white border-blue-950 shadow-md" : "bg-white hover:bg-slate-100 text-slate-800 border-slate-200"
+          }">
+            <span>${g.title.split("—")[0]}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded ${isActive ? "bg-blue-800 text-blue-200" : "bg-slate-100 text-slate-600"}">${g.memberNames.length} alunos</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderHeaderUI() {
+      const b601 = document.getElementById("btn-class-601");
+      const b602 = document.getElementById("btn-class-602");
+      const activeCls = appState.activeClass;
+
+      b601.className = `px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${activeCls === "601" ? "bg-blue-600 text-white shadow" : "text-slate-300 hover:text-white"}`;
+      b602.className = `px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${activeCls === "602" ? "bg-blue-600 text-white shadow" : "text-slate-300 hover:text-white"}`;
+
+      document.getElementById("current-class-info-label").textContent = activeCls === "601" ? "Turma 601 • Turno Matutino" : "Turma 602 • Turno Vespertino";
+    }
+
+    function renderAll() {
+      renderHeaderUI();
+      renderGroupTabs();
+      const g = getCurrentGroup();
+      document.getElementById("active-group-title-input").value = g.title || "";
+      updateTimerUI();
+      renderLiveStudentCheckboxes();
+      renderQA();
+      renderGroupCriteria();
+      renderIndividualEvaluationCards();
+    }
+
+    // SUMMARY MODAL
+    function openSummaryModal() {
+      const cls = getCurrentClassData();
+      const activeClsName = appState.activeClass === "601" ? "Turma 601 (Matutino)" : "Turma 602 (Vespertino)";
+      document.getElementById("modal-class-name").textContent = activeClsName;
+      document.getElementById("report-main-title").textContent = `Relatório de Avaliação — ${activeClsName}`;
+      document.getElementById("report-date").textContent = `Data: ${new Date().toLocaleDateString("pt-BR")}`;
+
+      const tbody = document.getElementById("summary-tbody");
+      let totalSum = 0;
+      let count = 0;
+
+      let rowsHtml = "";
+      cls.groups.forEach(g => {
+        g.memberNames.forEach(name => {
+          const scores = cls.studentScores[name] || { c3: 0, c4: 0, c5: 0 };
+          const groupSub = Number(g.c1 || 0) + Number(g.c2 || 0);
+          const indivSub = Number(scores.c3 || 0) + Number(scores.c4 || 0) + Number(scores.c5 || 0);
+          const finalTotal = Math.min(10, groupSub + indivSub);
+          totalSum += finalTotal;
+          count++;
+
+          rowsHtml += `
+            <tr class="hover:bg-slate-50">
+              <td class="py-2 px-3 font-bold text-blue-900">${g.title.split("—")[0]}</td>
+              <td class="py-2 px-3 font-semibold text-slate-900">${name}</td>
+              <td class="py-2 px-2 text-center font-mono">${formatDecimal(g.c1)}</td>
+              <td class="py-2 px-2 text-center font-mono">${formatDecimal(g.c2)}</td>
+              <td class="py-2 px-2 text-center font-mono font-bold text-blue-800 bg-blue-50">${formatDecimal(groupSub)}</td>
+              <td class="py-2 px-2 text-center font-mono">${formatDecimal(scores.c3)}</td>
+              <td class="py-2 px-2 text-center font-mono">${formatDecimal(scores.c4)}</td>
+              <td class="py-2 px-2 text-center font-mono">${formatDecimal(scores.c5)}</td>
+              <td class="py-2 px-2 text-center font-mono font-bold text-emerald-800 bg-emerald-50">${formatDecimal(indivSub)}</td>
+              <td class="py-2 px-3 text-center font-mono font-extrabold text-slate-900 bg-slate-100">${formatDecimal(finalTotal)}</td>
+            </tr>
+          `;
+        });
+      });
+
+      tbody.innerHTML = rowsHtml || `<tr><td colspan="10" class="text-center py-6 text-slate-500">Nenhum aluno avaliado nesta turma ainda.</td></tr>`;
+      const avg = count > 0 ? totalSum / count : 0;
+      document.getElementById("report-avg").textContent = `Média: ${formatDecimal(avg)} / 10,0`;
+
+      document.getElementById("summary-modal").classList.remove("hidden");
+    }
+
+    function closeSummaryModal() { document.getElementById("summary-modal").classList.add("hidden"); }
+
+    function copyToClipboard() {
+      const cls = getCurrentClassData();
+      let tsv = "Turma\tGrupo\tAluno\tC1\tC2\tSub Grupo\tC3\tC4\tC5\tSub Indiv\tNOTA FINAL\n";
+      const className = appState.activeClass === "601" ? "601 Matutino" : "602 Vespertino";
+
+      cls.groups.forEach(g => {
+        g.memberNames.forEach(name => {
+          const scores = cls.studentScores[name] || { c3: 0, c4: 0, c5: 0 };
+          const groupSub = Number(g.c1 || 0) + Number(g.c2 || 0);
+          const indivSub = Number(scores.c3 || 0) + Number(scores.c4 || 0) + Number(scores.c5 || 0);
+          const finalTotal = Math.min(10, groupSub + indivSub);
+          tsv += `${className}\t${g.title.split("—")[0]}\t${name}\t${formatDecimal(g.c1)}\t${formatDecimal(g.c2)}\t${formatDecimal(groupSub)}\t${formatDecimal(scores.c3)}\t${formatDecimal(scores.c4)}\t${formatDecimal(scores.c5)}\t${formatDecimal(indivSub)}\t${formatDecimal(finalTotal)}\n`;
+        });
+      });
+
+      const ta = document.createElement("textarea");
+      ta.value = tsv;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      showToast("📋 Copiado! Cole diretamente no Excel ou Google Planilhas.");
+    }
+
+    function confirmResetCurrentClass() {
+      document.getElementById("confirm-reset-modal").classList.remove("hidden");
+    }
+    function closeResetModal() { document.getElementById("confirm-reset-modal").classList.add("hidden"); }
+    function executeReset() {
+      appState.classes[appState.activeClass] = createClassInitialData(appState.activeClass === "601" ? TURMA_601_STUDENTS : TURMA_602_STUDENTS);
+      appState.activeGroupId = appState.classes[appState.activeClass].groups[0].id;
+      saveState();
+      closeResetModal();
+      renderAll();
+      showToast("Dados da turma reiniciados.");
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      loadState();
+      renderAll();
+      startTimerEngine();
+    });
+  </script>
+</body>
+</html>
